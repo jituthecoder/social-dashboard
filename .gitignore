@@ -1,0 +1,55 @@
+
+# PHP / Laravel-like
+/.env
+/.env.*
+/vendor/
+/node_modules/
+/composer.lock
+
+# Build / cache
+/public/storage
+/storage/*.key
+/storage/*.log
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+
+# Uploaded files and user content
+/uploads/
+/public/uploads/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+/.idea/
+/.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# node
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+*.log
+
+# PHPUnit
+/phpunit.xml
+
+# Composer
+/composer.phar
+
+# Misc
+*.sql
+*.sqlite
+/.sass-cache/
+
+# XAMPP / Windows specific
+/xamppfiles/
+
+# Ignore environment-specific local config
+/env.local
