@@ -64,14 +64,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   return (
     <aside className="w-64 bg-slate-900/80 backdrop-blur-xl border-r border-slate-800/80 flex flex-col h-full overflow-y-auto">
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-800/80 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
-          <Share2 className="w-5 h-5" />
-        </div>
-        <div>
-          <h1 className="text-sm font-bold text-white tracking-wide">Social W3Lead</h1>
-          <p className="text-[10px] font-medium text-indigo-400 uppercase tracking-widest">SaaS Dashboard</p>
-        </div>
+      <div className="p-4 border-b border-slate-800/80 flex items-center justify-start">
+        <img
+          src="/logo.png"
+          alt="A4 AutoPost"
+          className="h-9 w-auto max-w-full object-contain"
+        />
       </div>
 
       {/* Navigation Sections */}
