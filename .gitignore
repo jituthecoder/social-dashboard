@@ -6,7 +6,12 @@
 /node_modules/
 /composer.lock
 
-# Build / cache
+# Build / output / cache
+dist/
+dist
+build/
+.next/
+out/
 /public/storage
 /storage/*.key
 /storage/*.log
