@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
@@ -16,9 +16,7 @@ export const ProtectedRoute: React.FC = () => {
   }
 
   if (!user) {
-    const marketingUrl = import.meta.env.VITE_MARKETING_URL || 'https://social.w3lead.in';
-    window.location.href = `${marketingUrl}/login`;
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   return <Outlet />;

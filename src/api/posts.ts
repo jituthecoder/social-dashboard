@@ -6,11 +6,13 @@ export interface CreatePostPayload {
   content: string;
   is_scheduled?: boolean;
   scheduled_at?: string;
+  publish_now?: boolean;
   social_account_ids?: number[];
   variants?: Array<{
     platform: string;
     content?: string;
     hashtags?: string[];
+    metadata?: Record<string, any>;
     social_account_id?: number;
   }>;
   media_ids?: number[];
@@ -38,6 +40,11 @@ export const postsApi = {
 
   create: async (payload: CreatePostPayload) => {
     const response = await apiClient.post<ApiResponse<Post>>('/posts', payload);
+    return response.data;
+  },
+
+  publish: async (id: number) => {
+    const response = await apiClient.post<ApiResponse<{ post: Post; success: boolean }>>(`/posts/${id}/publish`);
     return response.data;
   },
 

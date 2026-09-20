@@ -45,8 +45,9 @@ export interface WorkspaceMember {
 export interface SocialAccount {
   id: number;
   workspace_id: number;
-  platform: 'linkedin' | 'meta' | 'instagram' | 'x' | 'tiktok' | 'youtube';
+  platform: 'linkedin' | 'facebook' | 'meta' | 'instagram' | 'x' | 'twitter' | 'tiktok' | 'youtube';
   platform_account_id: string;
+
   name: string;
   username?: string | null;
   account_type: string;

@@ -4,7 +4,6 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
-  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -15,12 +14,20 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    if (config.headers && typeof config.headers.set === 'function') {
+      config.headers.set('Authorization', `Bearer ${token}`);
+    } else if (config.headers) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
   }
 
   const workspaceId = localStorage.getItem('active_workspace_id');
   if (workspaceId) {
-    config.headers['X-Workspace-Id'] = workspaceId;
+    if (config.headers && typeof config.headers.set === 'function') {
+      config.headers.set('X-Workspace-Id', workspaceId);
+    } else if (config.headers) {
+      config.headers['X-Workspace-Id'] = workspaceId;
+    }
   }
 
   return config;
