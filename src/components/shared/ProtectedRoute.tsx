@@ -10,7 +10,7 @@ export const ProtectedRoute: React.FC = () => {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-slate-100">
         <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-3" />
-        <p className="text-xs text-slate-400 font-medium">Authenticating Social W3Lead...</p>
+        <p className="text-xs text-slate-400 font-medium">Authenticating A4 AutoPost...</p>
       </div>
     );
   }
