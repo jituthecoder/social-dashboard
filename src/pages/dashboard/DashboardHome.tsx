@@ -20,6 +20,7 @@ import {
   Share2,
   Sparkles,
 } from 'lucide-react';
+import { SocialPlatformIcon, SocialPlatformBadge, getPlatformBrandColor } from '../../components/shared/SocialPlatformIcon';
 
 export const DashboardHome: React.FC = () => {
   const navigate = useNavigate();
@@ -172,37 +173,52 @@ export const DashboardHome: React.FC = () => {
             />
           ) : (
             <div className="space-y-3">
-              {posts.map((post) => (
-                <Card key={post.id} className="flex items-center justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge
-                        variant={
-                          post.status === 'published'
-                            ? 'success'
-                            : post.status === 'scheduled'
-                            ? 'info'
-                            : 'default'
-                        }
-                      >
-                        {post.status}
-                      </Badge>
-                      {post.scheduled_at && (
-                        <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(post.scheduled_at).toLocaleString()}
-                        </span>
-                      )}
+              {posts.map((post) => {
+                const postPlatforms = Array.from(
+                  new Set([
+                    ...(post.variants?.map((v) => v.platform) || []),
+                    ...(post.targets?.map((t) => t.social_account?.platform).filter(Boolean) as string[] || []),
+                  ])
+                );
+
+                return (
+                  <Card key={post.id} className="flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <Badge
+                          variant={
+                            post.status === 'published'
+                              ? 'success'
+                              : post.status === 'scheduled'
+                              ? 'info'
+                              : 'default'
+                          }
+                        >
+                          {post.status}
+                        </Badge>
+
+                        {/* Social Platform Badges */}
+                        {postPlatforms.map((platform) => (
+                          <SocialPlatformBadge key={platform} platform={platform} size="xs" />
+                        ))}
+
+                        {post.scheduled_at && (
+                          <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(post.scheduled_at).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-medium text-slate-200 truncate">
+                        {post.title || post.content}
+                      </p>
                     </div>
-                    <p className="text-xs font-medium text-slate-200 truncate">
-                      {post.title || post.content}
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/posts/${post.id}`)}>
-                    Details
-                  </Button>
-                </Card>
-              ))}
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/posts/${post.id}`)}>
+                      Details
+                    </Button>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
@@ -223,19 +239,23 @@ export const DashboardHome: React.FC = () => {
               <p className="text-xs text-slate-400">No social accounts connected yet.</p>
             ) : (
               <div className="space-y-2.5">
-                {accounts.map((acc) => (
-                  <div key={acc.id} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center font-bold text-[10px] uppercase text-indigo-400">
-                        {acc.platform[0]}
+                {accounts.map((acc) => {
+                  const brand = getPlatformBrandColor(acc.platform);
+
+                  return (
+                    <div key={acc.id} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-6 h-6 rounded-full ${brand.bg} flex items-center justify-center text-white shadow-sm shrink-0`}>
+                          <SocialPlatformIcon platform={acc.platform} className="w-3 h-3" />
+                        </div>
+                        <span className="font-medium text-slate-200 truncate max-w-[140px]">{acc.name}</span>
                       </div>
-                      <span className="font-medium text-slate-200">{acc.name}</span>
+                      <Badge variant={acc.connection_status === 'connected' ? 'success' : 'error'}>
+                        {acc.connection_status}
+                      </Badge>
                     </div>
-                    <Badge variant={acc.connection_status === 'connected' ? 'success' : 'error'}>
-                      {acc.connection_status}
-                    </Badge>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>

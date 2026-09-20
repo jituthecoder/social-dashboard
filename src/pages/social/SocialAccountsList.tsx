@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Link2, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { SocialPlatformIcon, getPlatformBrandColor } from '../../components/shared/SocialPlatformIcon';
 
 export const SocialAccountsList: React.FC = () => {
   const queryClient = useQueryClient();
@@ -37,10 +38,11 @@ export const SocialAccountsList: React.FC = () => {
   const accounts = accountsRes?.data || [];
 
   const platforms = [
-    { id: 'linkedin', name: 'LinkedIn', color: 'bg-blue-600' },
-    { id: 'meta', name: 'Facebook Page', color: 'bg-indigo-600' },
-    { id: 'instagram', name: 'Instagram Business', color: 'bg-pink-600' },
-    { id: 'x', name: 'X (Twitter)', color: 'bg-slate-700' },
+    { id: 'linkedin', name: 'LinkedIn', color: 'bg-[#0A66C2]' },
+    { id: 'facebook', name: 'Facebook Page', color: 'bg-[#1877F2]' },
+    { id: 'instagram', name: 'Instagram Business', color: 'bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]' },
+    { id: 'twitter', name: 'X (Twitter)', color: 'bg-black border border-slate-700' },
+    { id: 'youtube', name: 'YouTube', color: 'bg-[#FF0000]' },
   ];
 
   return (
@@ -54,14 +56,21 @@ export const SocialAccountsList: React.FC = () => {
       </div>
 
       {/* Available Connections Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {platforms.map((p) => {
-          const isConnected = accounts.some((a) => a.platform === p.id && a.connection_status === 'connected');
+          const isConnected = accounts.some(
+            (a) =>
+              (a.platform === p.id ||
+                ((p.id === 'twitter' || p.id === 'x') && (a.platform === 'twitter' || a.platform === 'x')) ||
+                (p.id === 'facebook' && a.platform === 'meta')) &&
+              a.connection_status === 'connected'
+          );
+
           return (
             <Card key={p.id} hoverEffect className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className={`w-8 h-8 rounded-lg ${p.color} flex items-center justify-center text-white font-bold text-xs shadow-md`}>
-                  {p.name[0]}
+                <div className={`w-9 h-9 rounded-xl ${p.color} flex items-center justify-center text-white shadow-md`}>
+                  <SocialPlatformIcon platform={p.id} className="w-5 h-5" />
                 </div>
                 {isConnected ? (
                   <Badge variant="success">Connected</Badge>
@@ -104,19 +113,23 @@ export const SocialAccountsList: React.FC = () => {
           </div>
         ) : (
           <div className="divide-y divide-slate-800">
-            {accounts.map((acc) => (
-              <div key={acc.id} className="py-3 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold uppercase text-indigo-400 border border-slate-700">
-                    {acc.platform[0]}
+            {accounts.map((acc) => {
+              const brand = getPlatformBrandColor(acc.platform);
+
+              return (
+                <div key={acc.id} className="py-3 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-full ${brand.bg} flex items-center justify-center text-white shadow-sm shrink-0`}>
+                      <SocialPlatformIcon platform={acc.platform} className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-white">{acc.name}</h4>
+                      <p className="text-[11px] text-slate-400">
+                        @{acc.username || acc.platform_account_id} • {acc.account_type}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-semibold text-white">{acc.name}</h4>
-                    <p className="text-[11px] text-slate-400">
-                      @{acc.username || acc.platform_account_id} • {acc.account_type}
-                    </p>
-                  </div>
-                </div>
+
 
                 <div className="flex items-center gap-3">
                   <Badge variant={acc.connection_status === 'connected' ? 'success' : 'error'}>
@@ -135,7 +148,8 @@ export const SocialAccountsList: React.FC = () => {
                   </Button>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
       </Card>

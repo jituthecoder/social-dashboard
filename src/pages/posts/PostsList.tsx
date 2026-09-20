@@ -10,16 +10,38 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { Calendar, Clock, Plus, Trash2, Edit3, Search } from 'lucide-react';
+import { Calendar, Clock, Plus, Trash2, Edit3, Search, Rocket, ExternalLink } from 'lucide-react';
+import { SocialPlatformBadge } from '../../components/shared/SocialPlatformIcon';
+
+
+const getLiveUrl = (v: any) => {
+  if (v?.metadata?.external_url) return v.metadata.external_url;
+  if (v?.platform === 'linkedin' && v?.metadata?.external_id) {
+    return `https://www.linkedin.com/feed/update/${v.metadata.external_id}/`;
+  }
+  if (v?.platform === 'youtube' && v?.metadata?.external_id) {
+    return `https://www.youtube.com/watch?v=${v.metadata.external_id}`;
+  }
+  if ((v?.platform === 'facebook' || v?.platform === 'meta') && v?.metadata?.external_id) {
+    return `https://facebook.com/${v.metadata.external_id}`;
+  }
+  if (v?.platform === 'instagram' && v?.metadata?.shortcode) {
+    return `https://instagram.com/p/${v.metadata.shortcode}/`;
+  }
+  return null;
+};
+
 
 export const PostsList: React.FC = () => {
   const navigate = useNavigate();
+
   const queryClient = useQueryClient();
   const { activeWorkspace } = useWorkspace();
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [platformFilter, setPlatformFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [page, setPage] = useState<number>(1);
+  const [publishingId, setPublishingId] = useState<number | null>(null);
 
   const { data: postsRes, isLoading } = useQuery({
     queryKey: ['posts', activeWorkspace?.id, statusFilter, platformFilter, page],
@@ -35,6 +57,17 @@ export const PostsList: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => postsApi.delete(id),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: async (id: number) => {
+      setPublishingId(id);
+      return postsApi.publish(id);
+    },
+    onSettled: () => {
+      setPublishingId(null);
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
@@ -148,14 +181,32 @@ export const PostsList: React.FC = () => {
                     {post.status}
                   </Badge>
 
-                  {post.variants && post.variants.map((v) => (
-                    <span
-                      key={v.id}
-                      className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700"
-                    >
-                      {v.platform}
-                    </span>
+                  {post.variants && post.variants.map((v) => {
+                    const liveUrl = getLiveUrl(v);
+                    return (
+                      <div key={v.id} className="flex items-center gap-1.5">
+                        <SocialPlatformBadge platform={v.platform} size="xs" />
+                        {liveUrl && (
+                          <a
+                            href={liveUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20 transition-colors"
+                            title={`View live on ${v.platform}`}
+                          >
+                            View Live <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {(!post.variants || post.variants.length === 0) && post.targets && post.targets.map((t) => (
+                    t.social_account ? (
+                      <SocialPlatformBadge key={t.id} platform={t.social_account.platform} size="xs" />
+                    ) : null
                   ))}
+
 
                   {post.scheduled_at && (
                     <span className="text-[11px] text-slate-400 flex items-center gap-1">
@@ -172,6 +223,18 @@ export const PostsList: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 self-end md:self-center">
+                {post.status !== 'published' && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white"
+                    leftIcon={<Rocket className="w-3.5 h-3.5" />}
+                    onClick={() => publishMutation.mutate(post.id)}
+                    isLoading={publishingId === post.id}
+                  >
+                    Publish Now
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
