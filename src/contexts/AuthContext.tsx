@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentWorkspace(null);
       localStorage.removeItem('auth_token');
       localStorage.removeItem('active_workspace_id');
-      const marketingUrl = import.meta.env.VITE_MARKETING_URL || 'https://social.w3lead.in';
+      const marketingUrl = import.meta.env.VITE_MARKETING_URL || 'https://a4autopost.com';
       window.location.href = `${marketingUrl}/login`;
     }
   };

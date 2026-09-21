@@ -24,6 +24,9 @@ jobs:
         run: npm ci
 
       - name: Build Application
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://api.a4autopost.com/api/v1' }}
+          VITE_MARKETING_URL: ${{ secrets.VITE_MARKETING_URL || 'https://a4autopost.com' }}
         run: npm run build
 
       - name: Setup SSH Agent
