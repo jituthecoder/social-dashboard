@@ -111,7 +111,7 @@ export const SocialPlatformBadge: React.FC<{
 
   return (
     <span
-      className={`inline-flex items-center rounded-full font-medium shadow-xs shrink-0 ${sizeClasses[size]} ${brand.bg} text-white ${className}`}
+      className={`inline-flex items-center rounded-full font-medium shadow-xs shrink-0 transition-transform duration-150 ease-out hover:scale-105 select-none ${sizeClasses[size]} ${brand.bg} text-white ${className}`}
       title={displayName}
     >
       <SocialPlatformIcon platform={p} className={iconSizes[size]} />
