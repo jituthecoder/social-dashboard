@@ -34,8 +34,8 @@ jobs:
       - name: Add SSH Host Key
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT || '65002' }} ${{ secrets.HOSTINGER_HOST || '195.179.238.121' }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy to Hostinger Server
         run: |
-          rsync -e "ssh -p ${{ secrets.HOSTINGER_PORT || '65002' }} -o StrictHostKeyChecking=no" -avz --delete dist/ ${{ secrets.HOSTINGER_USER || 'u971218733' }}@${{ secrets.HOSTINGER_HOST || '195.179.238.121' }}:/home/u971218733/domains/a4autopost.com/public_html/dashboard/
+          rsync -e "ssh -p ${{ secrets.HOSTINGER_PORT }} -o StrictHostKeyChecking=no" -avz --delete dist/ ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_TARGET_DIR }}
