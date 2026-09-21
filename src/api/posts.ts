@@ -57,4 +57,9 @@ export const postsApi = {
     const response = await apiClient.delete<ApiResponse<null>>(`/posts/${id}`);
     return response.data;
   },
+
+  deleteTarget: async (postId: number, targetId: number) => {
+    const response = await apiClient.delete<ApiResponse<any>>(`/posts/${postId}/targets/${targetId}`);
+    return response.data;
+  },
 };

@@ -28,6 +28,9 @@ const getLiveUrl = (v: any) => {
   if (v?.platform === 'instagram' && v?.metadata?.shortcode) {
     return `https://instagram.com/p/${v.metadata.shortcode}/`;
   }
+  if ((v?.platform === 'twitter' || v?.platform === 'x') && v?.metadata?.external_id) {
+    return `https://x.com/i/status/${v.metadata.external_id}`;
+  }
   return null;
 };
 
@@ -52,14 +55,46 @@ export const PostsList: React.FC = () => {
         page,
       }),
     enabled: !!activeWorkspace,
+    refetchInterval: (query) => {
+      const list = query.state.data?.data?.data || [];
+      const isAnyPublishing = list.some((p: any) => p.status === 'publishing');
+      return isAnyPublishing ? 3000 : false;
+    },
   });
 
+  const [deletingPostId, setDeletingPostId] = useState<number | null>(null);
+  const [deletingTargetId, setDeletingTargetId] = useState<number | null>(null);
+
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => postsApi.delete(id),
-    onSuccess: () => {
+    mutationFn: async (id: number) => {
+      setDeletingPostId(id);
+      return postsApi.delete(id);
+    },
+    onSettled: () => {
+      setDeletingPostId(null);
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
+
+  const deleteTargetMutation = useMutation({
+    mutationFn: async ({ postId, targetId }: { postId: number; targetId: number }) => {
+      setDeletingTargetId(targetId);
+      return postsApi.deleteTarget(postId, targetId);
+    },
+    onSettled: () => {
+      setDeletingTargetId(null);
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+
+  const handleDeletePlatform = (postId: number, targetId: number, platform: string) => {
+    const isConfirm = window.confirm(
+      `Are you sure you want to delete this post from ${platform.toUpperCase()} only?\n\nIt will remain published and live on your other platforms.`
+    );
+    if (isConfirm) {
+      deleteTargetMutation.mutate({ postId, targetId });
+    }
+  };
 
   const publishMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -183,30 +218,74 @@ export const PostsList: React.FC = () => {
 
                   {post.variants && post.variants.map((v) => {
                     const liveUrl = getLiveUrl(v);
+                    const target = post.targets?.find(
+                      (t) =>
+                        t.social_account_id === v.social_account_id ||
+                        (t.social_account && t.social_account.platform === v.platform)
+                    );
+                    const isTargetDeleting = target && deletingTargetId === target.id;
+
                     return (
-                      <div key={v.id} className="flex items-center gap-1.5">
+                      <div
+                        key={v.id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-850 border border-slate-700/60 text-xs transition-all duration-200 ease-out hover:border-slate-500/70 hover:scale-[1.02] hover:shadow-sm"
+                      >
                         <SocialPlatformBadge platform={v.platform} size="xs" />
                         {liveUrl && (
                           <a
                             href={liveUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20 transition-colors"
+                            className="group inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 hover:bg-sky-500/25 hover:text-sky-300 hover:shadow-xs active:scale-95 transition-all duration-150"
                             title={`View live on ${v.platform}`}
                           >
-                            View Live <ExternalLink className="w-2.5 h-2.5" />
+                            View Live <ExternalLink className="w-2.5 h-2.5 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                           </a>
+                        )}
+                        {target && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePlatform(post.id, target.id, v.platform)}
+                            disabled={isTargetDeleting}
+                            className="group p-1 rounded-full text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 active:scale-90 transition-all duration-150 ml-0.5 cursor-pointer"
+                            title={`Delete only from ${v.platform}`}
+                          >
+                            {isTargetDeleting ? (
+                              <span className="w-2.5 h-2.5 border-2 border-rose-400 border-t-transparent rounded-full animate-spin inline-block" />
+                            ) : (
+                              <Trash2 className="w-2.5 h-2.5 transition-transform duration-150 group-hover:scale-110 group-hover:rotate-6" />
+                            )}
+                          </button>
                         )}
                       </div>
                     );
                   })}
 
-                  {(!post.variants || post.variants.length === 0) && post.targets && post.targets.map((t) => (
-                    t.social_account ? (
-                      <SocialPlatformBadge key={t.id} platform={t.social_account.platform} size="xs" />
-                    ) : null
-                  ))}
-
+                  {(!post.variants || post.variants.length === 0) && post.targets && post.targets.map((t) => {
+                    if (!t.social_account) return null;
+                    const isTargetDeleting = deletingTargetId === t.id;
+                    return (
+                      <div
+                        key={t.id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-850 border border-slate-700/60 text-xs transition-all duration-200 ease-out hover:border-slate-500/70 hover:scale-[1.02] hover:shadow-sm"
+                      >
+                        <SocialPlatformBadge platform={t.social_account.platform} size="xs" />
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePlatform(post.id, t.id, t.social_account!.platform)}
+                          disabled={isTargetDeleting}
+                          className="group p-1 rounded-full text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 active:scale-90 transition-all duration-150 ml-0.5 cursor-pointer"
+                          title={`Delete only from ${t.social_account.platform}`}
+                        >
+                          {isTargetDeleting ? (
+                            <span className="w-2.5 h-2.5 border-2 border-rose-400 border-t-transparent rounded-full animate-spin inline-block" />
+                          ) : (
+                            <Trash2 className="w-2.5 h-2.5 transition-transform duration-150 group-hover:scale-110 group-hover:rotate-6" />
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
 
                   {post.scheduled_at && (
                     <span className="text-[11px] text-slate-400 flex items-center gap-1">
@@ -247,8 +326,13 @@ export const PostsList: React.FC = () => {
                   variant="danger"
                   size="sm"
                   leftIcon={<Trash2 className="w-3.5 h-3.5" />}
-                  onClick={() => deleteMutation.mutate(post.id)}
-                  isLoading={deleteMutation.isPending}
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to delete this post from the database and all connected platforms?')) {
+                      deleteMutation.mutate(post.id);
+                    }
+                  }}
+                  isLoading={deletingPostId === post.id}
+                  disabled={deletingPostId !== null}
                 >
                   Delete
                 </Button>

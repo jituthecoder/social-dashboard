@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { postsApi } from '../../api/posts';
 import { socialAccountsApi } from '../../api/socialAccounts';
 import { mediaApi } from '../../api/media';
@@ -22,7 +22,8 @@ import {
   X,
   Youtube,
   Linkedin,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { SocialPlatformIcon, getPlatformBrandColor } from '../../components/shared/SocialPlatformIcon';
 
@@ -39,6 +40,10 @@ export const CreatePost: React.FC = () => {
   const queryClient = useQueryClient();
   const { activeWorkspace } = useWorkspace();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { id: editIdParam } = useParams<{ id: string }>();
+  const isEditMode = Boolean(editIdParam && !isNaN(Number(editIdParam)));
+  const editPostId = isEditMode ? Number(editIdParam) : null;
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -61,6 +66,64 @@ export const CreatePost: React.FC = () => {
   // Feedback banner
   const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Fetch existing post data if in edit mode
+  const { data: editPostRes, isLoading: isLoadingPost } = useQuery({
+    queryKey: ['post', editPostId],
+    queryFn: () => postsApi.get(editPostId!),
+    enabled: isEditMode && !!editPostId,
+  });
+
+  useEffect(() => {
+    if (editPostRes?.data) {
+      const p = editPostRes.data;
+      setTitle(p.title || '');
+      setContent(p.content || '');
+      if (p.scheduled_at) {
+        try {
+          const d = new Date(p.scheduled_at);
+          const pad = (n: number) => (n < 10 ? `0${n}` : n);
+          const localIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          setScheduledAt(localIso);
+        } catch {
+          setScheduledAt('');
+        }
+      }
+      if (p.media && p.media.length > 0) {
+        setMediaItems(
+          p.media.map((m) => ({
+            id: m.id,
+            url: m.url,
+            mime_type: m.mime_type,
+            original_name: m.original_name,
+            size: m.size,
+          }))
+        );
+      }
+      if (p.targets && p.targets.length > 0) {
+        const targetAccountIds = p.targets
+          .map((t) => t.social_account_id)
+          .filter(Boolean) as number[];
+        setSelectedAccountIds(targetAccountIds);
+      }
+      if (p.variants && p.variants.length > 0) {
+        const liVariant = p.variants.find((v) => v.platform === 'linkedin');
+        if (liVariant && liVariant.content && liVariant.content !== p.content) {
+          setVariantLinkedIn(liVariant.content);
+        }
+        const ytVariant = p.variants.find((v) => v.platform === 'youtube');
+        if (ytVariant) {
+          const ytMeta = ytVariant.metadata as any;
+          if (ytMeta) {
+            if (ytMeta.title) setYoutubeTitle(ytMeta.title);
+            if (ytMeta.category_id) setYoutubeCategory(ytMeta.category_id);
+            if (ytMeta.privacy_status) setYoutubePrivacy(ytMeta.privacy_status);
+            if (ytMeta.made_for_kids !== undefined) setYoutubeMadeForKids(Boolean(ytMeta.made_for_kids));
+          }
+        }
+      }
+    }
+  }, [editPostRes]);
+
   const { data: accountsRes } = useQuery({
     queryKey: ['socialAccounts', activeWorkspace?.id],
     queryFn: () => socialAccountsApi.list(),
@@ -75,6 +138,7 @@ export const CreatePost: React.FC = () => {
   const isInstagramSelected = selectedAccounts.some((a) => a.platform === 'instagram');
 
   const hasVideoAttached = mediaItems.some((m) => m.mime_type.startsWith('video/'));
+  const hasImageAttached = mediaItems.some((m) => m.mime_type.startsWith('image/'));
 
 
   const toggleAccount = (id: number) => {
@@ -166,18 +230,35 @@ export const CreatePost: React.FC = () => {
         media_ids: mediaItems.map((m) => m.id),
       };
 
-      return postsApi.create(payload);
+      if (isEditMode && editPostId) {
+        await postsApi.update(editPostId, payload);
+        if (action === 'publish_now') {
+          return postsApi.publish(editPostId);
+        }
+        return { success: true, data: { id: editPostId } };
+      } else {
+        return postsApi.create(payload);
+      }
     },
     onSuccess: (_res, action) => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
+      if (isEditMode && editPostId) {
+        queryClient.invalidateQueries({ queryKey: ['post', editPostId] });
+      }
       if (action === 'publish_now') {
         setActionFeedback({
           type: 'success',
-          message: 'Post published successfully across selected channels!',
+          message: isEditMode
+            ? 'Post updated and queued for publishing!'
+            : 'Post published successfully across selected channels!',
         });
         setTimeout(() => navigate('/dashboard/posts'), 1800);
       } else {
-        navigate('/dashboard/posts');
+        setActionFeedback({
+          type: 'success',
+          message: isEditMode ? 'Post updated successfully!' : 'Post saved successfully!',
+        });
+        setTimeout(() => navigate('/dashboard/posts'), 1200);
       }
     },
     onError: (err: any) => {
@@ -187,6 +268,15 @@ export const CreatePost: React.FC = () => {
       });
     },
   });
+
+  if (isEditMode && isLoadingPost) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+        <p className="text-sm font-medium">Loading post #{editPostId} details...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -201,8 +291,14 @@ export const CreatePost: React.FC = () => {
           Back
         </Button>
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Create & Publish Post</h2>
-          <p className="text-xs text-slate-400">Compose, attach media, and broadcast instantly or schedule</p>
+          <h2 className="text-xl font-bold text-white tracking-tight">
+            {isEditMode ? `Edit Post #${editPostId}` : 'Create & Publish Post'}
+          </h2>
+          <p className="text-xs text-slate-400">
+            {isEditMode
+              ? 'Update content, media attachments, channels, or reschedule'
+              : 'Compose, attach media, and broadcast instantly or schedule'}
+          </p>
         </div>
       </div>
 
@@ -312,7 +408,9 @@ export const CreatePost: React.FC = () => {
                   <span>Media Attachments</span>
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Upload images (JPG, PNG, WebP) or video (MP4, MOV)
+                  {isYouTubeSelected
+                    ? '🎬 YouTube selected — Only video files (.mp4, .mov) can be uploaded'
+                    : 'Upload images (JPG, PNG, WebP) or video (MP4, MOV)'}
                 </p>
               </div>
               <Badge variant="info">
@@ -329,7 +427,7 @@ export const CreatePost: React.FC = () => {
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*,video/*,.jpg,.jpeg,.png,.webp,.gif,.jfif,.avif,.heic,.mp4,.mov,.avi,.webm,.mkv"
+                accept={isYouTubeSelected ? 'video/*,.mp4,.mov,.avi,.webm,.mkv' : 'image/*,video/*,.jpg,.jpeg,.png,.webp,.gif,.jfif,.avif,.heic,.mp4,.mov,.avi,.webm,.mkv'}
                 className="hidden"
                 onChange={handleFileUpload}
               />
@@ -346,7 +444,9 @@ export const CreatePost: React.FC = () => {
                     {isUploadingMedia ? 'Uploading media...' : 'Click to select or drop images/video'}
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    LinkedIn & Facebook: Images & Videos | Instagram: Photos, Carousel & Reels | YouTube: Videos
+                    {isYouTubeSelected
+                      ? '⚡ YouTube: Only MP4/MOV videos | ≤60 sec = YouTube Shorts | >60 sec = Regular Video'
+                      : 'LinkedIn & Facebook: Images & Videos | Instagram: Photos, Carousel & Reels | YouTube: Videos'}
                   </p>
 
                 </div>
@@ -385,6 +485,14 @@ export const CreatePost: React.FC = () => {
                         />
                       )}
 
+                      {isYouTubeSelected && !isVideo && (
+                        <div className="absolute inset-0 bg-red-900/70 flex items-center justify-center rounded-lg">
+                          <div className="text-center px-1">
+                            <X className="w-5 h-5 text-red-300 mx-auto" />
+                            <p className="text-[9px] text-red-200 font-bold mt-0.5">Not for YouTube</p>
+                          </div>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -412,9 +520,38 @@ export const CreatePost: React.FC = () => {
               </div>
 
               {!hasVideoAttached && (
-                <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>Please attach a video file (.mp4) in the media section above for YouTube.</span>
+                <div className="p-3.5 rounded-lg bg-amber-950/50 border border-amber-500/40 text-amber-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-amber-300">YouTube API Only Supports Videos & Shorts (.mp4, .mov)</p>
+                      <p className="text-slate-300 text-[11px] mt-0.5">Google Data API does not allow publishing images or Community tab posts via third-party apps. For image posts, deselect YouTube to broadcast to Facebook, Instagram, LinkedIn, and Twitter.</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-amber-500/50 text-amber-300 hover:bg-amber-500/10 text-xs shrink-0 whitespace-nowrap"
+                    onClick={() => {
+                      const ytAccount = accounts.find((a: any) => a.platform === 'youtube');
+                      if (ytAccount) toggleAccount(ytAccount.id);
+                    }}
+                  >
+                    Deselect YouTube
+                  </Button>
+                </div>
+              )}
+
+              {hasVideoAttached && (
+                <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div>
+                    <p className="font-semibold">Video detected ✅</p>
+                    <p className="text-[11px] text-emerald-400/80 mt-0.5">
+                      Videos ≤60 seconds will automatically be published as <strong>YouTube Shorts</strong>. Videos longer than 60 seconds will be uploaded as a regular <strong>YouTube Video</strong>.
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -519,24 +656,24 @@ export const CreatePost: React.FC = () => {
                       key={acc.id}
                       type="button"
                       onClick={() => toggleAccount(acc.id)}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg border text-xs font-medium transition-colors ${
+                      className={`group w-full flex items-center justify-between p-3 rounded-lg border text-xs font-medium cursor-pointer transition-all duration-200 ease-out active:scale-[0.98] hover:translate-x-0.5 ${
                         isSelected
                           ? isYt
-                            ? 'bg-red-600/10 border-red-500/50 text-white'
-                            : 'bg-indigo-600/10 border-indigo-500/50 text-white'
-                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                            ? 'bg-red-600/15 border-red-500/70 text-white shadow-md shadow-red-600/15 ring-1 ring-red-500/30'
+                            : 'bg-indigo-600/15 border-indigo-500/70 text-white shadow-md shadow-indigo-600/15 ring-1 ring-indigo-500/30'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-800/40 hover:text-slate-200'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-6 h-6 rounded-md ${getPlatformBrandColor(acc.platform).bg} flex items-center justify-center text-white shadow-sm shrink-0`}>
+                        <div className={`w-6 h-6 rounded-md ${getPlatformBrandColor(acc.platform).bg} flex items-center justify-center text-white shadow-sm shrink-0 transition-transform duration-200 group-hover:scale-110`}>
                           <SocialPlatformIcon platform={acc.platform} className="w-3.5 h-3.5" />
                         </div>
                         <div className="text-left">
-                          <p className="capitalize font-semibold text-slate-200">{acc.platform}</p>
+                          <p className="capitalize font-semibold text-slate-200 tracking-wide">{acc.platform}</p>
                           <p className="text-[11px] text-slate-400 truncate max-w-[140px]">{acc.name}</p>
                         </div>
                       </div>
-                      {isSelected && <Check className="w-4 h-4 text-emerald-400" />}
+                      {isSelected && <Check className="w-4 h-4 text-emerald-400 animate-in zoom-in-50 duration-150" />}
                     </button>
                   );
                 })}
@@ -553,11 +690,11 @@ export const CreatePost: React.FC = () => {
               variant="primary"
               className="w-full bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20 text-white font-semibold py-2.5"
               leftIcon={<Rocket className="w-4 h-4" />}
-              disabled={!content.trim() || selectedAccountIds.length === 0 || (isYouTubeSelected && !hasVideoAttached)}
+              disabled={!(content.trim() || mediaItems.length > 0) || selectedAccountIds.length === 0 || (isYouTubeSelected && !hasVideoAttached) || (isYouTubeSelected && hasImageAttached && !hasVideoAttached)}
               isLoading={createPostMutation.isPending}
               onClick={() => createPostMutation.mutate('publish_now')}
             >
-              Publish Now 🚀
+              {isEditMode ? 'Update & Publish Now 🚀' : 'Publish Now 🚀'}
             </Button>
 
             <div className="relative flex items-center justify-center my-2">
@@ -580,22 +717,22 @@ export const CreatePost: React.FC = () => {
                 variant="secondary"
                 className="w-full"
                 leftIcon={<Calendar className="w-4 h-4" />}
-                disabled={!content.trim() || !scheduledAt || selectedAccountIds.length === 0}
+                disabled={!(content.trim() || mediaItems.length > 0) || !scheduledAt || selectedAccountIds.length === 0}
                 isLoading={createPostMutation.isPending}
                 onClick={() => createPostMutation.mutate('schedule')}
               >
-                Schedule Post
+                {isEditMode ? 'Update Schedule' : 'Schedule Post'}
               </Button>
 
               <Button
                 variant="outline"
                 className="w-full text-slate-400 hover:text-white"
                 leftIcon={<Send className="w-3.5 h-3.5" />}
-                disabled={!content.trim()}
+                disabled={!(content.trim() || mediaItems.length > 0)}
                 isLoading={createPostMutation.isPending}
                 onClick={() => createPostMutation.mutate('draft')}
               >
-                Save as Draft
+                {isEditMode ? 'Save Changes' : 'Save as Draft'}
               </Button>
             </div>
           </Card>
