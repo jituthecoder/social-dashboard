@@ -1,0 +1,44 @@
+name: Deploy Social Dashboard to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://api.a4autopost.com/api/v1' }}
+          VITE_MARKETING_URL: ${{ secrets.VITE_MARKETING_URL || 'https://a4autopost.com' }}
+        run: npm run build
+
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HOSTINGER_SSH_KEY }}
+
+      - name: Add SSH Host Key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT }} ${{ secrets.HOSTINGER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Hostinger Server
+        run: |
+          rsync -e "ssh -p ${{ secrets.HOSTINGER_PORT }} -o StrictHostKeyChecking=no" -avz --delete dist/ ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_TARGET_DIR }}
