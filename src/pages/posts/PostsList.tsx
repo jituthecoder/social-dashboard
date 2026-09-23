@@ -10,7 +10,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { Calendar, Clock, Plus, Trash2, Edit3, Search, Rocket, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, Plus, Trash2, Edit3, Search, Rocket, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { SocialPlatformBadge } from '../../components/shared/SocialPlatformIcon';
 
 
@@ -88,8 +88,24 @@ export const PostsList: React.FC = () => {
   });
 
   const handleDeletePlatform = (postId: number, targetId: number, platform: string) => {
+    if (platform === 'instagram') {
+      handleInstagramManualDelete(postId, targetId);
+      return;
+    }
     const isConfirm = window.confirm(
       `Are you sure you want to delete this post from ${platform.toUpperCase()} only?\n\nIt will remain published and live on your other platforms.`
+    );
+    if (isConfirm) {
+      deleteTargetMutation.mutate({ postId, targetId });
+    }
+  };
+
+  const handleInstagramManualDelete = (postId: number, targetId: number) => {
+    const isConfirm = window.confirm(
+      `⚠️ Instagram does NOT allow deleting posts via API.\n\n` +
+      `Please delete this post manually from the Instagram app or instagram.com first.\n\n` +
+      `Have you already deleted it from Instagram?\n\n` +
+      `Click OK to confirm you've deleted it — this will remove it from your dashboard.`
     );
     if (isConfirm) {
       deleteTargetMutation.mutate({ postId, targetId });
@@ -242,7 +258,23 @@ export const PostsList: React.FC = () => {
                             View Live <ExternalLink className="w-2.5 h-2.5 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                           </a>
                         )}
-                        {target && (
+                        {target && v.platform === 'instagram' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleInstagramManualDelete(post.id, target.id)}
+                            disabled={isTargetDeleting}
+                            className="group inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 hover:text-amber-300 hover:shadow-xs active:scale-95 transition-all duration-150 ml-0.5 cursor-pointer"
+                            title="Instagram doesn't support API deletion. Click after manually deleting from Instagram."
+                          >
+                            {isTargetDeleting ? (
+                              <span className="w-2.5 h-2.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin inline-block" />
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-2.5 h-2.5" /> I deleted it
+                              </>
+                            )}
+                          </button>
+                        ) : target && (
                           <button
                             type="button"
                             onClick={() => handleDeletePlatform(post.id, target.id, v.platform)}
@@ -270,19 +302,37 @@ export const PostsList: React.FC = () => {
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-850 border border-slate-700/60 text-xs transition-all duration-200 ease-out hover:border-slate-500/70 hover:scale-[1.02] hover:shadow-sm"
                       >
                         <SocialPlatformBadge platform={t.social_account.platform} size="xs" />
-                        <button
-                          type="button"
-                          onClick={() => handleDeletePlatform(post.id, t.id, t.social_account!.platform)}
-                          disabled={isTargetDeleting}
-                          className="group p-1 rounded-full text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 active:scale-90 transition-all duration-150 ml-0.5 cursor-pointer"
-                          title={`Delete only from ${t.social_account.platform}`}
-                        >
-                          {isTargetDeleting ? (
-                            <span className="w-2.5 h-2.5 border-2 border-rose-400 border-t-transparent rounded-full animate-spin inline-block" />
-                          ) : (
-                            <Trash2 className="w-2.5 h-2.5 transition-transform duration-150 group-hover:scale-110 group-hover:rotate-6" />
-                          )}
-                        </button>
+                        {t.social_account.platform === 'instagram' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleInstagramManualDelete(post.id, t.id)}
+                            disabled={isTargetDeleting}
+                            className="group inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 hover:text-amber-300 hover:shadow-xs active:scale-95 transition-all duration-150 ml-0.5 cursor-pointer"
+                            title="Instagram doesn't support API deletion. Click after manually deleting from Instagram."
+                          >
+                            {isTargetDeleting ? (
+                              <span className="w-2.5 h-2.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin inline-block" />
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-2.5 h-2.5" /> I deleted it
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePlatform(post.id, t.id, t.social_account!.platform)}
+                            disabled={isTargetDeleting}
+                            className="group p-1 rounded-full text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 active:scale-90 transition-all duration-150 ml-0.5 cursor-pointer"
+                            title={`Delete only from ${t.social_account.platform}`}
+                          >
+                            {isTargetDeleting ? (
+                              <span className="w-2.5 h-2.5 border-2 border-rose-400 border-t-transparent rounded-full animate-spin inline-block" />
+                            ) : (
+                              <Trash2 className="w-2.5 h-2.5 transition-transform duration-150 group-hover:scale-110 group-hover:rotate-6" />
+                            )}
+                          </button>
+                        )}
                       </div>
                     );
                   })}
