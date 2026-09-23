@@ -12,6 +12,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
+import { SocialPlatformIcon } from '../shared/SocialPlatformIcon';
 
 interface SidebarProps {
   onCloseMobile?: () => void;
@@ -105,6 +106,55 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
           </div>
         ))}
       </nav>
+
+      {/* Official Brand Social Links */}
+      <div className="p-3 border-t border-slate-800/80 bg-slate-950/40">
+        <div className="px-1 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <span>Official Socials</span>
+          <span className="text-[9px] text-emerald-400 font-medium flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            Follow Us
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-1">
+          <a
+            href="https://www.instagram.com/a4autopost/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Follow A4 AutoPost on Instagram"
+            className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-pink-400 hover:border-pink-500/40 hover:bg-pink-500/10 transition-all duration-200"
+          >
+            <SocialPlatformIcon platform="instagram" className="w-3.5 h-3.5" />
+          </a>
+          <a
+            href="https://www.facebook.com/profile.php?id=61594349112657"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Follow A4 AutoPost on Facebook"
+            className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-blue-400 hover:border-blue-500/40 hover:bg-blue-500/10 transition-all duration-200"
+          >
+            <SocialPlatformIcon platform="facebook" className="w-3.5 h-3.5" />
+          </a>
+          <a
+            href="https://www.linkedin.com/company/145224167/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Follow A4 AutoPost on LinkedIn"
+            className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-sky-400 hover:border-sky-500/40 hover:bg-sky-500/10 transition-all duration-200"
+          >
+            <SocialPlatformIcon platform="linkedin" className="w-3.5 h-3.5" />
+          </a>
+          <a
+            href="https://x.com/a4autopost"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Follow @a4autopost on X (Twitter)"
+            className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-600 hover:bg-slate-800 transition-all duration-200"
+          >
+            <SocialPlatformIcon platform="x" className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
     </aside>
   );
 };
