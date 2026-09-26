@@ -14,6 +14,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Synchronously ingest token from URL immediately before any route navigation/redirect
+const ingestUrlToken = () => {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+    const urlWorkspaceId = urlParams.get('workspace_id');
+
+    if (urlToken) {
+      localStorage.setItem('auth_token', urlToken);
+      if (urlWorkspaceId) {
+        localStorage.setItem('active_workspace_id', urlWorkspaceId);
+      }
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  } catch {}
+};
+
+// Immediate execution on module load
+ingestUrlToken();
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
@@ -21,20 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUser = async () => {
     try {
-      // Ingest token from URL parameter if passed from marketing website redirect
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlToken = urlParams.get('token');
-      const urlWorkspaceId = urlParams.get('workspace_id');
-
-      if (urlToken) {
-        localStorage.setItem('auth_token', urlToken);
-        if (urlWorkspaceId) {
-          localStorage.setItem('active_workspace_id', urlWorkspaceId);
-        }
-        // Remove sensitive token query parameters from browser address bar
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-
+      ingestUrlToken();
       const token = localStorage.getItem('auth_token');
       if (!token) {
         setLoading(false);
