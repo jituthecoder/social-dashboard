@@ -42,9 +42,8 @@ apiClient.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('active_workspace_id');
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-        window.location.href = '/login';
-      }
+      const marketingUrl = (import.meta.env.VITE_MARKETING_URL || 'https://a4autopost.com').replace(/\/+$/, '');
+      window.location.replace(`${marketingUrl}/login`);
     }
     return Promise.reject(error);
   }

@@ -1,12 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthLayout } from './components/shared/AuthLayout';
 import { ProtectedRoute } from './components/shared/ProtectedRoute';
 import { DashboardLayout } from './components/layout/DashboardLayout';
-
-import { Login } from './pages/auth/Login';
-import { Register } from './pages/auth/Register';
-import { ForgotPassword } from './pages/auth/ForgotPassword';
 
 import { DashboardHome } from './pages/dashboard/DashboardHome';
 import { PostsList } from './pages/posts/PostsList';
@@ -21,16 +16,28 @@ import { ProfileSettings } from './pages/settings/ProfileSettings';
 import { SecuritySettings } from './pages/settings/SecuritySettings';
 import { BillingOverview } from './pages/billing/BillingOverview';
 
+const ExternalRedirect: React.FC<{ path: string }> = ({ path }) => {
+  React.useEffect(() => {
+    const marketingUrl = (import.meta.env.VITE_MARKETING_URL || 'https://a4autopost.com').replace(/\/+$/, '');
+    window.location.replace(`${marketingUrl}${path}`);
+  }, [path]);
+
+  return (
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-slate-100">
+      <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3" />
+      <p className="text-xs text-slate-400 font-medium">Redirecting to A4 AutoPost...</p>
+    </div>
+  );
+};
+
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Guest Auth Routes */}
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-        </Route>
+        {/* Redirect Guest Auth Routes to Official Marketing Website */}
+        <Route path="/login" element={<ExternalRedirect path="/login" />} />
+        <Route path="/register" element={<ExternalRedirect path="/signup" />} />
+        <Route path="/forgot-password" element={<ExternalRedirect path="/login" />} />
 
         {/* Protected Dashboard Routes */}
         <Route element={<ProtectedRoute />}>
